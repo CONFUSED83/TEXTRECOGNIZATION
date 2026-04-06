@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Neural Scanner Pro (Fixed CDN)</title>
+    <title>Cloud OCR Scanner - Tesseract.js</title>
     
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <!-- Tesseract.js from reliable CDN -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 
     <style>
         :root {
@@ -15,7 +16,9 @@
             --border: rgba(255, 255, 255, 0.15);
             --text: #f1f5f9;
             --accent: #38bdf8;
-            --err: #ef4444;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
@@ -25,62 +28,98 @@
         .menu-card { background: var(--card); padding: 30px; border-radius: 28px; text-align: center; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
         
         .loader-wrap { margin: 20px 0; }
-        .progress-container { width: 100%; height: 8px; background: #242f42; border-radius: 10px; overflow: hidden; display: none; }
-        .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease; }
-        
-        #statusText { font-size: 0.75rem; color: var(--accent); font-weight: bold; text-transform: uppercase; margin-top: 10px; display: block; line-height: 1.4; }
+        .progress-container { width: 100%; height: 6px; background: #242f42; border-radius: 10px; overflow: hidden; display: none; }
+        .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.3s; }
+        .progress-bar.error { background: var(--error); }
+        .progress-bar.success { background: var(--success); }
+        #statusText { font-size: 0.75rem; color: var(--accent); font-weight: bold; text-transform: uppercase; margin-top: 10px; display: block; }
+        #statusText.error { color: var(--error); }
+        #statusText.success { color: var(--success); }
+        #statusText.warning { color: var(--warning); }
 
-        .btn { width: 100%; padding: 18px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; background: var(--primary); color: white; font-size: 1rem; transition: all 0.3s; }
-        .btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; opacity: 0.6; }
+        .btn { width: 100%; padding: 18px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; background: var(--primary); color: white; font-size: 1rem; transition: 0.2s; }
+        .btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+        .btn-success { background: var(--success); }
+        .btn-error { background: var(--error); }
+        .btn-error:hover { background: #dc2626; }
+        
+        .cache-info { font-size: 0.7rem; color: #64748b; margin-top: 8px; font-style: italic; }
+        .detail-info { font-size: 0.65rem; color: #475569; margin-top: 5px; }
         
         .results-stack { display: flex; flex-direction: column; gap: 15px; margin-top: 25px; text-align: left; }
         .result-card { background: #0f172a; padding: 16px; border-radius: 20px; border: 1px solid var(--border); }
         .result-card span { font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 10px; }
         
-        .canvas-preview { width: 100%; height: 60px; background: #000; border-radius: 10px; margin-bottom: 10px; border: 1px solid #1e293b; }
+        .canvas-preview { width: 100%; height: 60px; background: #000; border-radius: 10px; margin-bottom: 10px; border: 1px solid #1e293b; overflow: hidden; }
         canvas { width: 100%; height: 100%; object-fit: contain; }
 
         .app-text { 
-            font-family: 'Consolas', monospace; font-size: 1.1rem; color: #fff; background: #000; 
+            font-family: 'Consolas', monospace; font-size: 1.2rem; color: #fff; background: #000; 
             padding: 12px; border-radius: 12px; text-align: center; border: 1px solid var(--primary);
         }
+        .confidence-text {
+            font-size: 0.7rem; color: #64748b; margin-top: 5px; text-align: center;
+        }
         #mainUpload { display: none; }
+        
+        .retry-section { margin-top: 15px; display: none; }
+        .retry-section.visible { display: block; }
+        
+        .settings-info {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 15px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-align: left;
+        }
+        .settings-info strong { color: var(--accent); }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div class="menu-card">
-            <h2>Neural Scanner</h2>
-            <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 10px;">Deep Learning OCR Pipeline</p>
+            <h2>Cloud OCR Scanner</h2>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">Powered by Tesseract.js - Optimized for Digits</p>
             
             <div class="loader-wrap">
                 <div class="progress-container" id="pContainer"><div class="progress-bar" id="pBar"></div></div>
-                <span id="statusText">Initializing AI...</span>
+                <span id="statusText">Initializing Tesseract...</span>
+                <div class="cache-info" id="cacheInfo">Loading OCR engine...</div>
+                <div class="detail-info" id="detailInfo"></div>
             </div>
 
-            <button class="btn" id="uploadBtn" disabled onclick="document.getElementById('mainUpload').click()">Please Wait...</button>
+            <button class="btn" id="uploadBtn" disabled onclick="document.getElementById('mainUpload').click()">Awaiting Engine...</button>
             <input type="file" id="mainUpload" accept="image/*">
+            
+            <div class="retry-section" id="retrySection">
+                <button class="btn btn-error" id="retryBtn" onclick="retryInit()">Retry Loading</button>
+            </div>
+
+            <div class="settings-info" id="settingsInfo" style="display: none;">
+                <strong>OCR Configuration:</strong><br>
+                • Engine: LSTM Neural Network<br>
+                • Character Set: 0-9 digits only<br>
+                • Mode: Single word/line recognition<br>
+                • Preprocessing: Auto contrast + grayscale
+            </div>
 
             <div id="resultsArea" style="display: none;">
                 <div class="results-stack">
-                    <div class="result-card"><span>ID Field 1</span><div class="canvas-preview"><canvas id="appCanvasCard1"></canvas></div><div class="app-text" id="appTextCard1">---</div></div>
-                    <div class="result-card"><span>ID Field 2</span><div class="canvas-preview"><canvas id="appCanvasCard2"></canvas></div><div class="app-text" id="appTextCard2">---</div></div>
-                    <div class="result-card"><span>Security Pin</span><div class="canvas-preview"><canvas id="appCanvasCode"></canvas></div><div class="app-text" id="appTextCode">---</div></div>
-                    <div class="result-card"><span>Valid Date</span><div class="canvas-preview"><canvas id="appCanvasDate"></canvas></div><div class="app-text" id="appTextDate">---</div></div>
+                    <div class="result-card"><span>Card ID 1</span><div class="canvas-preview"><canvas id="appCanvasCard1"></canvas></div><div class="app-text" id="appTextCard1">---</div><div class="confidence-text" id="appConfCard1"></div></div>
+                    <div class="result-card"><span>Card ID 2</span><div class="canvas-preview"><canvas id="appCanvasCard2"></canvas></div><div class="app-text" id="appTextCard2">---</div><div class="confidence-text" id="appConfCard2"></div></div>
+                    <div class="result-card"><span>Security Code</span><div class="canvas-preview"><canvas id="appCanvasCode"></canvas></div><div class="app-text" id="appTextCode">---</div><div class="confidence-text" id="appConfCode"></div></div>
+                    <div class="result-card"><span>Expiry Date</span><div class="canvas-preview"><canvas id="appCanvasDate"></canvas></div><div class="app-text" id="appTextDate">---</div><div class="confidence-text" id="appConfDate"></div></div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // High-availability Model Links (Try Mindee CDN first, then raw GitHub fallback)
-        const MODELS = [
-            'https://demo-doctr-tensorflowjs.mindee.com/models/crnn_mobilenet_v3_small/model.json',
-            'https://raw.githubusercontent.com/mindee/doctr-tfjs-demo/master/public/models/crnn_mobilenet_v3_small/model.json'
-        ];
-
-        const VOCAB = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ ";
+        // Define the 4 regions to extract (as percentages)
         const appRegions = [
             { id: 'Card1', left: 29.6, right: 39.2, top: 49.6, bottom: 53.2 },
             { id: 'Card2', left: 60.1, right: 69.6, top: 49.6, bottom: 53.2 },
@@ -88,117 +127,261 @@
             { id: 'Date', left: 46.4, right: 61.9, top: 74.8, bottom: 79.3 }
         ];
 
-        let ocrModel = null;
+        let worker = null;
+        let isInitialized = false;
 
-        async function initNeuralEngine() {
-            const status = document.getElementById('statusText');
-            const pBar = document.getElementById('pBar');
-            document.getElementById('pContainer').style.display = 'block';
-
-            for (let url of MODELS) {
-                try {
-                    status.innerText = "Connecting to Neural Cluster...";
-                    pBar.style.width = '40%';
-                    
-                    // Attempt to load. GraphModel is used for frozen docTR models
-                    ocrModel = await tf.loadGraphModel(url);
-                    
-                    pBar.style.width = '100%';
-                    status.innerText = "Neural Engine Online";
-                    status.style.color = '#10b981';
-                    
-                    const btn = document.getElementById('uploadBtn');
-                    btn.disabled = false;
-                    btn.innerText = "Upload Image";
-                    
-                    setTimeout(() => { document.getElementById('pContainer').style.display = 'none'; }, 1000);
-                    return; // Success, exit loop
-                } catch (e) {
-                    console.warn(`Link failed: ${url}`, e);
-                    status.innerText = "Retrying connection...";
-                }
+        // Check if language data is cached
+        async function checkLanguageCache() {
+            try {
+                const caches = await window.caches.keys();
+                const hasTesseractCache = caches.some(name => name.includes('tesseract'));
+                return hasTesseractCache;
+            } catch (e) {
+                return false;
             }
-            
-            status.innerText = "Fatal: All CDN nodes unreachable.\nCheck your internet connection.";
-            status.style.color = 'var(--err)';
         }
 
-        window.onload = initNeuralEngine;
+        async function initTesseract() {
+            const status = document.getElementById('statusText');
+            const pContainer = document.getElementById('pContainer');
+            const pBar = document.getElementById('pBar');
+            const btn = document.getElementById('uploadBtn');
+            const cacheInfo = document.getElementById('cacheInfo');
+            const detailInfo = document.getElementById('detailInfo');
+            const retrySection = document.getElementById('retrySection');
+            const settingsInfo = document.getElementById('settingsInfo');
+
+            pContainer.style.display = 'block';
+            status.className = '';
+            pBar.className = 'progress-bar';
+            retrySection.classList.remove('visible');
+            
+            // Check cache status
+            const isCached = await checkLanguageCache();
+            if (isCached) {
+                cacheInfo.innerText = 'Language data cached - loading from local storage...';
+            } else {
+                cacheInfo.innerText = 'Downloading language data (English traineddata ~10MB)...';
+            }
+
+            try {
+                status.innerText = 'Creating OCR Worker...';
+                pBar.style.width = '20%';
+                detailInfo.innerText = 'Initializing Tesseract.js v5';
+
+                // Create worker with logger for progress
+                worker = await Tesseract.createWorker('eng', 1, {
+                    logger: (m) => {
+                        console.log(m);
+                        if (m.status === 'loading language traineddata') {
+                            status.innerText = 'Downloading language data...';
+                            pBar.style.width = '40%';
+                            detailInfo.innerText = `Progress: ${Math.round(m.progress * 100)}%`;
+                        } else if (m.status === 'initializing api') {
+                            status.innerText = 'Initializing OCR engine...';
+                            pBar.style.width = '70%';
+                            detailInfo.innerText = 'Setting up LSTM neural network';
+                        }
+                    },
+                    errorHandler: (err) => console.error('Tesseract Error:', err)
+                });
+
+                pBar.style.width = '80%';
+                status.innerText = 'Configuring for digit recognition...';
+                detailInfo.innerText = 'Setting character whitelist and recognition mode';
+
+                // Configure for optimal digit recognition
+                // This is the key configuration for distinguishing 5, 7, 2, etc.
+                await worker.setParameters({
+                    // Only recognize digits 0-9
+                    tessedit_char_whitelist: '0123456789',
+                    // Use LSTM only (neural network mode - best accuracy)
+                    tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY,
+                    // Single word mode - treats each region as one word/number
+                    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_WORD,
+                    // Disable dictionaries for better number recognition
+                    load_system_dawg: false,
+                    load_freq_dawg: false,
+                    // Improve confidence for numbers
+                    tessedit_min_confidence: 30,
+                    // Classify as single character if it's short
+                    tessedit_classify_max_certainty: 0.95
+                });
+
+                pBar.style.width = '100%';
+                pBar.classList.add('success');
+                status.innerText = 'OCR Engine Ready!';
+                status.classList.add('success');
+                cacheInfo.innerText = 'Language data cached for offline use';
+                detailInfo.innerText = 'Optimized for digit recognition (0-9)';
+                
+                btn.disabled = false;
+                btn.classList.add('btn-success');
+                btn.innerText = "Upload Image";
+                
+                settingsInfo.style.display = 'block';
+                isInitialized = true;
+                
+                setTimeout(() => { pContainer.style.display = 'none'; }, 1500);
+                
+            } catch (error) {
+                console.error('Tesseract initialization failed:', error);
+                handleInitError(status, pBar, btn, cacheInfo, detailInfo, retrySection, error);
+            }
+        }
+
+        function handleInitError(status, pBar, btn, cacheInfo, detailInfo, retrySection, error) {
+            pBar.style.width = '100%';
+            pBar.classList.add('error');
+            status.innerText = 'Failed to load OCR engine';
+            status.classList.add('error');
+            cacheInfo.innerText = 'Check your internet connection and try again';
+            detailInfo.innerText = `Error: ${error.message || 'Unknown error'}`;
+            
+            btn.disabled = true;
+            btn.innerText = 'Engine Unavailable';
+            retrySection.classList.add('visible');
+        }
+
+        async function retryInit() {
+            const retryBtn = document.getElementById('retryBtn');
+            retryBtn.disabled = true;
+            retryBtn.innerText = 'Retrying...';
+            
+            // Clear any existing worker
+            if (worker) {
+                try {
+                    await worker.terminate();
+                } catch (e) {
+                    console.log('Worker termination error:', e);
+                }
+                worker = null;
+            }
+            
+            // Clear caches to force fresh download
+            try {
+                const caches = await window.caches.keys();
+                for (const cacheName of caches) {
+                    if (cacheName.includes('tesseract')) {
+                        await window.caches.delete(cacheName);
+                    }
+                }
+            } catch (e) {
+                console.log('Cache clear error:', e);
+            }
+            
+            // Retry initialization
+            await initTesseract();
+            
+            retryBtn.disabled = false;
+            retryBtn.innerText = 'Retry Loading';
+        }
+
+        window.onload = initTesseract;
 
         document.getElementById('mainUpload').onchange = async e => {
             const file = e.target.files[0];
-            if (!file || !ocrModel) return;
+            if (!file || !isInitialized || !worker) return;
 
             const img = await loadImage(file);
             document.getElementById('resultsArea').style.display = 'block';
-            document.getElementById('statusText').innerText = "Analyzing Tensors...";
+            const status = document.getElementById('statusText');
+            status.innerText = "Processing regions...";
+            status.className = '';
+            status.style.color = 'var(--accent)';
 
             for (const region of appRegions) {
                 const canvas = document.getElementById(`appCanvas${region.id}`);
                 const textDiv = document.getElementById(`appText${region.id}`);
-                textDiv.innerText = "...";
+                const confDiv = document.getElementById(`appConf${region.id}`);
+                textDiv.innerText = "Extracting...";
+                confDiv.innerText = "";
 
+                // Calculate crop coordinates
                 const x = (region.left / 100) * img.width;
                 const y = (region.top / 100) * img.height;
                 const w = ((region.right - region.left) / 100) * img.width;
                 const h = ((region.bottom - region.top) / 100) * img.height;
 
-                canvas.width = w * 2; canvas.height = h * 2;
+                // Create preprocessed canvas for display and OCR
+                canvas.width = w * 2;
+                canvas.height = h * 2;
                 const ctx = canvas.getContext('2d');
+                
+                // Draw original crop
                 ctx.drawImage(img, x, y, w, h, 0, 0, canvas.width, canvas.height);
+                
+                // Apply preprocessing for better OCR accuracy
+                preprocessCanvas(canvas);
 
                 try {
-                    const result = await tf.tidy(() => {
-                        const tensor = tf.browser.fromPixels(canvas)
-                            .resizeBilinear([32, 128])
-                            .mean(2) // Grayscale
-                            .expandDims(2)
-                            .toFloat()
-                            .div(255.0)
-                            .expandDims(0);
-                        
-                        const pred = ocrModel.predict(tensor);
-                        return decode(pred);
-                    });
-                    textDiv.innerText = result || "???";
-                } catch (err) {
-                    textDiv.innerText = "OCR Error";
+                    // Perform OCR on the canvas
+                    const result = await worker.recognize(canvas);
+                    const text = result.data.text.trim();
+                    const confidence = result.data.confidence;
+                    
+                    textDiv.innerText = text || "---";
+                    confDiv.innerText = confidence > 0 ? `Confidence: ${Math.round(confidence)}%` : '';
+                    
+                    console.log(`Region ${region.id}: "${text}" (confidence: ${confidence}%)`);
+                } catch (error) {
+                    console.error(`OCR error for region ${region.id}:`, error);
+                    textDiv.innerText = "Error";
+                    confDiv.innerText = "Recognition failed";
                 }
             }
-            document.getElementById('statusText').innerText = "Processing Done";
+            
+            status.innerText = "Extraction Complete";
+            status.style.color = 'var(--success)';
         };
 
-        function decode(prediction) {
-            const data = prediction.dataSync();
-            const [batch, seq, classes] = prediction.shape;
-            let str = "";
-            let last = -1;
-
-            for (let i = 0; i < seq; i++) {
-                let max = 0, idx = -1;
-                for (let c = 0; c < classes; c++) {
-                    const val = data[i * classes + c];
-                    if (val > max) { max = val; idx = c; }
-                }
-                if (idx !== classes - 1 && idx !== last) {
-                    str += VOCAB[idx] || "";
-                }
-                last = idx;
+        // Preprocess canvas image for better OCR accuracy
+        function preprocessCanvas(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // Convert to grayscale and enhance contrast
+            for (let i = 0; i < data.length; i += 4) {
+                // Grayscale
+                const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                
+                // Enhance contrast (increase difference between dark and light)
+                const contrast = 1.5; // Increase contrast by 50%
+                const adjusted = ((gray - 128) * contrast) + 128;
+                
+                // Clamp values
+                const final = Math.max(0, Math.min(255, adjusted));
+                
+                data[i] = final;     // R
+                data[i + 1] = final; // G
+                data[i + 2] = final; // B
+                // Alpha stays the same
             }
-            return str;
+            
+            ctx.putImageData(imageData, 0, 0);
         }
 
         function loadImage(file) {
-            return new Promise(res => {
-                const r = new FileReader();
-                r.onload = e => {
-                    const i = new Image();
-                    i.onload = () => res(i);
-                    i.src = e.target.result;
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = e.target.result;
                 };
-                r.readAsDataURL(file);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
         }
+
+        // Cleanup on page unload
+        window.onbeforeunload = async () => {
+            if (worker) {
+                await worker.terminate();
+            }
+        };
     </script>
 </body>
 </html>
