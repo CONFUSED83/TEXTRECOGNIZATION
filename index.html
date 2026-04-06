@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Cloud TFJS Scanner</title>
+    <title>Neural Scanner Pro (Fixed CDN)</title>
     
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
 
     <style>
         :root {
@@ -15,7 +15,7 @@
             --border: rgba(255, 255, 255, 0.15);
             --text: #f1f5f9;
             --accent: #38bdf8;
-            --success: #10b981;
+            --err: #ef4444;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
@@ -25,23 +25,23 @@
         .menu-card { background: var(--card); padding: 30px; border-radius: 28px; text-align: center; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
         
         .loader-wrap { margin: 20px 0; }
-        .progress-container { width: 100%; height: 6px; background: #242f42; border-radius: 10px; overflow: hidden; display: none; }
-        .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.3s; }
-        #statusText { font-size: 0.75rem; color: var(--accent); font-weight: bold; text-transform: uppercase; margin-top: 10px; display: block; }
+        .progress-container { width: 100%; height: 8px; background: #242f42; border-radius: 10px; overflow: hidden; display: none; }
+        .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease; }
+        
+        #statusText { font-size: 0.75rem; color: var(--accent); font-weight: bold; text-transform: uppercase; margin-top: 10px; display: block; line-height: 1.4; }
 
-        .btn { width: 100%; padding: 18px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; background: var(--primary); color: white; font-size: 1rem; transition: 0.2s; }
-        .btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
-        .btn-success { background: var(--success); }
+        .btn { width: 100%; padding: 18px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; background: var(--primary); color: white; font-size: 1rem; transition: all 0.3s; }
+        .btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; opacity: 0.6; }
         
         .results-stack { display: flex; flex-direction: column; gap: 15px; margin-top: 25px; text-align: left; }
         .result-card { background: #0f172a; padding: 16px; border-radius: 20px; border: 1px solid var(--border); }
         .result-card span { font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 10px; }
         
-        .canvas-preview { width: 100%; height: 60px; background: #000; border-radius: 10px; margin-bottom: 10px; border: 1px solid #1e293b; overflow: hidden; }
+        .canvas-preview { width: 100%; height: 60px; background: #000; border-radius: 10px; margin-bottom: 10px; border: 1px solid #1e293b; }
         canvas { width: 100%; height: 100%; object-fit: contain; }
 
         .app-text { 
-            font-family: 'Consolas', monospace; font-size: 1.2rem; color: #fff; background: #000; 
+            font-family: 'Consolas', monospace; font-size: 1.1rem; color: #fff; background: #000; 
             padding: 12px; border-radius: 12px; text-align: center; border: 1px solid var(--primary);
         }
         #mainUpload { display: none; }
@@ -51,29 +51,36 @@
 
     <div class="container">
         <div class="menu-card">
-            <h2>Cloud TFJS Scanner</h2>
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">Direct CDN Model Loading</p>
+            <h2>Neural Scanner</h2>
+            <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 10px;">Deep Learning OCR Pipeline</p>
             
             <div class="loader-wrap">
                 <div class="progress-container" id="pContainer"><div class="progress-bar" id="pBar"></div></div>
-                <span id="statusText">Connecting to CDN...</span>
+                <span id="statusText">Initializing AI...</span>
             </div>
 
-            <button class="btn" id="uploadBtn" disabled onclick="document.getElementById('mainUpload').click()">Awaiting Engine...</button>
+            <button class="btn" id="uploadBtn" disabled onclick="document.getElementById('mainUpload').click()">Please Wait...</button>
             <input type="file" id="mainUpload" accept="image/*">
 
             <div id="resultsArea" style="display: none;">
                 <div class="results-stack">
-                    <div class="result-card"><span>Card ID 1</span><div class="canvas-preview"><canvas id="appCanvasCard1"></canvas></div><div class="app-text" id="appTextCard1">---</div></div>
-                    <div class="result-card"><span>Card ID 2</span><div class="canvas-preview"><canvas id="appCanvasCard2"></canvas></div><div class="app-text" id="appTextCard2">---</div></div>
-                    <div class="result-card"><span>Security Code</span><div class="canvas-preview"><canvas id="appCanvasCode"></canvas></div><div class="app-text" id="appTextCode">---</div></div>
-                    <div class="result-card"><span>Expiry Date</span><div class="canvas-preview"><canvas id="appCanvasDate"></canvas></div><div class="app-text" id="appTextDate">---</div></div>
+                    <div class="result-card"><span>ID Field 1</span><div class="canvas-preview"><canvas id="appCanvasCard1"></canvas></div><div class="app-text" id="appTextCard1">---</div></div>
+                    <div class="result-card"><span>ID Field 2</span><div class="canvas-preview"><canvas id="appCanvasCard2"></canvas></div><div class="app-text" id="appTextCard2">---</div></div>
+                    <div class="result-card"><span>Security Pin</span><div class="canvas-preview"><canvas id="appCanvasCode"></canvas></div><div class="app-text" id="appTextCode">---</div></div>
+                    <div class="result-card"><span>Valid Date</span><div class="canvas-preview"><canvas id="appCanvasDate"></canvas></div><div class="app-text" id="appTextDate">---</div></div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        // High-availability Model Links (Try Mindee CDN first, then raw GitHub fallback)
+        const MODELS = [
+            'https://demo-doctr-tensorflowjs.mindee.com/models/crnn_mobilenet_v3_small/model.json',
+            'https://raw.githubusercontent.com/mindee/doctr-tfjs-demo/master/public/models/crnn_mobilenet_v3_small/model.json'
+        ];
+
+        const VOCAB = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ ";
         const appRegions = [
             { id: 'Card1', left: 29.6, right: 39.2, top: 49.6, bottom: 53.2 },
             { id: 'Card2', left: 60.1, right: 69.6, top: 49.6, bottom: 53.2 },
@@ -81,44 +88,42 @@
             { id: 'Date', left: 46.4, right: 61.9, top: 74.8, bottom: 79.3 }
         ];
 
-        // Public CDN URL for the pre-trained docTR MobileNetV3 CRNN
-        const MODEL_URL = 'https://cdn.jsdelivr.net/gh/mindee/doctr@main/demo/tfjs/static/models/crnn_mobilenet_v3_small/model.json';
-        const VOCAB = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ ";
-        
         let ocrModel = null;
 
-        async function initTFJS() {
-            try {
-                const status = document.getElementById('statusText');
-                const pContainer = document.getElementById('pContainer');
-                const pBar = document.getElementById('pBar');
-                const btn = document.getElementById('uploadBtn');
+        async function initNeuralEngine() {
+            const status = document.getElementById('statusText');
+            const pBar = document.getElementById('pBar');
+            document.getElementById('pContainer').style.display = 'block';
 
-                pContainer.style.display = 'block';
-                status.innerText = "Downloading Model from CDN (approx 5MB)...";
-                pBar.style.width = '30%';
-
-                // Load directly from jsDelivr CDN
-                // TFJS handles the caching automatically in IndexedDB
-                ocrModel = await tf.loadGraphModel(MODEL_URL);
-                
-                pBar.style.width = '100%';
-                status.innerText = "Model Cached & Ready.";
-                status.style.color = 'var(--success)';
-                
-                btn.disabled = false;
-                btn.classList.add('btn-success');
-                btn.innerText = "Upload Image";
-                
-                setTimeout(() => { pContainer.style.display = 'none'; }, 1500);
-            } catch (e) {
-                console.error("TFJS CDN Init Error:", e);
-                document.getElementById('statusText').innerText = "Network Error: Could not reach CDN.";
-                document.getElementById('statusText').style.color = '#ef4444';
+            for (let url of MODELS) {
+                try {
+                    status.innerText = "Connecting to Neural Cluster...";
+                    pBar.style.width = '40%';
+                    
+                    // Attempt to load. GraphModel is used for frozen docTR models
+                    ocrModel = await tf.loadGraphModel(url);
+                    
+                    pBar.style.width = '100%';
+                    status.innerText = "Neural Engine Online";
+                    status.style.color = '#10b981';
+                    
+                    const btn = document.getElementById('uploadBtn');
+                    btn.disabled = false;
+                    btn.innerText = "Upload Image";
+                    
+                    setTimeout(() => { document.getElementById('pContainer').style.display = 'none'; }, 1000);
+                    return; // Success, exit loop
+                } catch (e) {
+                    console.warn(`Link failed: ${url}`, e);
+                    status.innerText = "Retrying connection...";
+                }
             }
+            
+            status.innerText = "Fatal: All CDN nodes unreachable.\nCheck your internet connection.";
+            status.style.color = 'var(--err)';
         }
 
-        window.onload = initTFJS;
+        window.onload = initNeuralEngine;
 
         document.getElementById('mainUpload').onchange = async e => {
             const file = e.target.files[0];
@@ -126,13 +131,12 @@
 
             const img = await loadImage(file);
             document.getElementById('resultsArea').style.display = 'block';
-            document.getElementById('statusText').innerText = "Processing Tensors...";
-            document.getElementById('statusText').style.color = 'var(--accent)';
+            document.getElementById('statusText').innerText = "Analyzing Tensors...";
 
             for (const region of appRegions) {
                 const canvas = document.getElementById(`appCanvas${region.id}`);
                 const textDiv = document.getElementById(`appText${region.id}`);
-                textDiv.innerText = "Extracting...";
+                textDiv.innerText = "...";
 
                 const x = (region.left / 100) * img.width;
                 const y = (region.top / 100) * img.height;
@@ -144,75 +148,55 @@
                 ctx.drawImage(img, x, y, w, h, 0, 0, canvas.width, canvas.height);
 
                 try {
-                    const extractedText = await runTensorFlowInference(img, x, y, w, h);
-                    textDiv.innerText = extractedText || "---";
-                } catch (error) {
-                    console.error(error);
-                    textDiv.innerText = "Error";
+                    const result = await tf.tidy(() => {
+                        const tensor = tf.browser.fromPixels(canvas)
+                            .resizeBilinear([32, 128])
+                            .mean(2) // Grayscale
+                            .expandDims(2)
+                            .toFloat()
+                            .div(255.0)
+                            .expandDims(0);
+                        
+                        const pred = ocrModel.predict(tensor);
+                        return decode(pred);
+                    });
+                    textDiv.innerText = result || "???";
+                } catch (err) {
+                    textDiv.innerText = "OCR Error";
                 }
             }
-            document.getElementById('statusText').innerText = "Extraction Complete";
-            document.getElementById('statusText').style.color = 'var(--success)';
+            document.getElementById('statusText').innerText = "Processing Done";
         };
 
-        async function runTensorFlowInference(imgElement, x, y, w, h) {
-            return tf.tidy(() => {
-                const offCanvas = document.createElement('canvas');
-                offCanvas.width = w; offCanvas.height = h;
-                offCanvas.getContext('2d').drawImage(imgElement, x, y, w, h, 0, 0, w, h);
+        function decode(prediction) {
+            const data = prediction.dataSync();
+            const [batch, seq, classes] = prediction.shape;
+            let str = "";
+            let last = -1;
 
-                let tensor = tf.browser.fromPixels(offCanvas)
-                    .resizeBilinear([32, 128])
-                    .toFloat();
-
-                tensor = tensor.mean(2).expandDims(2); 
-                tensor = tensor.div(255.0);
-                tensor = tensor.expandDims(0); 
-
-                const predictions = ocrModel.predict(tensor);
-                return decodeCTC(predictions);
-            });
-        }
-
-        function decodeCTC(predictionTensor) {
-            const data = predictionTensor.dataSync();
-            const sequenceLength = predictionTensor.shape[1]; 
-            const numClasses = predictionTensor.shape[2];     
-            
-            let result = "";
-            let prevIndex = -1;
-
-            for (let i = 0; i < sequenceLength; i++) {
-                let maxProb = 0;
-                let maxIndex = -1;
-
-                for (let c = 0; c < numClasses; c++) {
-                    const prob = data[i * numClasses + c];
-                    if (prob > maxProb) {
-                        maxProb = prob;
-                        maxIndex = c;
-                    }
+            for (let i = 0; i < seq; i++) {
+                let max = 0, idx = -1;
+                for (let c = 0; c < classes; c++) {
+                    const val = data[i * classes + c];
+                    if (val > max) { max = val; idx = c; }
                 }
-
-                if (maxIndex !== numClasses - 1 && maxIndex !== prevIndex) {
-                    if (maxIndex < VOCAB.length) {
-                        result += VOCAB[maxIndex];
-                    }
+                if (idx !== classes - 1 && idx !== last) {
+                    str += VOCAB[idx] || "";
                 }
-                prevIndex = maxIndex;
+                last = idx;
             }
-            return result;
+            return str;
         }
 
         function loadImage(file) {
-            return new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    const img = new Image();
-                    img.onload = () => resolve(img);
-                    img.src = e.target.result;
+            return new Promise(res => {
+                const r = new FileReader();
+                r.onload = e => {
+                    const i = new Image();
+                    i.onload = () => res(i);
+                    i.src = e.target.result;
                 };
-                reader.readAsDataURL(file);
+                r.readAsDataURL(file);
             });
         }
     </script>
